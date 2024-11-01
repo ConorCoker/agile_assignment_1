@@ -1,7 +1,44 @@
-services:
+networks:
+   profile-network:
+       external: true # network must be created outside of this compose file
+       name: 'mongo-network' 
+volumes:
+  moviedata: # persist MongoDB data across container restarts
 
+services:
+#CONTAINER 1
   api:
     image: doconnor/movies-api:1.0
-    container_name: movies-api
+    container_name: movies-api # uses image to create container on port 9000
     ports:
       - '9000:9000'
+    networks:
+       - profile-network
+    depends_on:
+      - database # db container must be created first as movies-api depends on it
+  #CONTAINER 2
+  database:
+    container_name: mongoDB
+    image: mongo:8.0-rc
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD}
+    networks:
+       - profile-network
+    volumes: 
+       - profiledata:/data/db 
+  #CONTAINER 3
+  mongo-express:
+    container_name: express
+    image: mongo-express:1.0-20-alpine3.19
+    restart: always # fixes MongoNetworkError caused by mongodb not being ready when mongo-express starts.
+    ports:
+      - 8080:8081
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGODB_USERNAME}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGODB_PASSWORD}
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+    networks:
+       - profile-network
+    depends_on:
+      - database
