@@ -1,7 +1,7 @@
 networks:
-   profile-network:
-       external: true # network must be created outside of this compose file
-       name: 'mongo-network' 
+  web-app-db-network-assign-one:
+  api-cache-network-assign-one:
+ 
 volumes:
   moviedata: # persist MongoDB data across container restarts
 
@@ -13,9 +13,20 @@ services:
     ports:
       - '9000:9000'
     networks:
-       - profile-network
+      - api-cache-network-assign-one # movies api is on two networks so it can talk to redis without exposing it
+      - web-app-db-network-assign-one 
     depends_on:
       - database # db container must be created first as movies-api depends on it
+      - caching
+    environment:
+      - MONGODB_URI=mongodb://admin:secret@mongoDB:27017
+      - ENABLE_WRITING_HANDLERS=false
+      - RUST_BACKTRACE=full
+      - REDIS_URI=redis://caching:6379
+      # It took awhile to get  ^ this ^ working, caching relates to the service down below compose can route it using the name caching
+      # the port number may not be needed especially if this changes but I am leaving it for now
+      # ^^^ https://stackoverflow.com/questions/73780056/dns-resolver-failed-to-resolve-host-redis-failed-to-lookup-address-informati
+      # ^^^ https://www.dragonflydb.io/error-solutions/redis-connection-error-111
   #CONTAINER 2
   database:
     container_name: mongoDB
@@ -24,9 +35,9 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD}
     networks:
-       - profile-network
+      - web-app-db-network-assign-one
     volumes: 
-       - profiledata:/data/db 
+      - moviedata:/data/db 
   #CONTAINER 3
   mongo-express:
     container_name: express
@@ -39,6 +50,12 @@ services:
       - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGODB_PASSWORD}
       - ME_CONFIG_MONGODB_SERVER=mongodb
     networks:
-       - profile-network
+      - web-app-db-network-assign-one
     depends_on:
       - database
+  #CONTAINER 4
+  caching:
+    container_name: redis
+    image: redis:alpine
+    networks:
+      - api-cache-network-assign-one # Only talk to movies api
