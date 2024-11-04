@@ -49,4 +49,6 @@
     ### Movies API retrieving the movies
     - **Database and Collection Naming**: After SSH-ing into the `movies-api` container, I discovered that it expects the MongoDB database name to be `tmdb_movies` with a collection name of `movie`. To ensure compatibility, I updated the MongoDB seeding configuration accordingly, so the API can query the database correctly. This change allows movies to display as expected in the browser at `http://localhost:9000/movies`
 
-
+5. ## Step Five
+    ### Setting up a developer profile
+    - **Making mongo express boot up only for devs** I have added `profiles: - developer` to my `mongo-express` container, this means that we must add the flag `docker-compose --profile developer up` to have the `mongo-express` boot up. The idea behind this is that in a production enviroment we may not need to waste resources on `mongo-express` so we add a flag for when we need it. 
