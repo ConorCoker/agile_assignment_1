@@ -46,4 +46,7 @@
 
     This configuration allows the Movies API to retrieve data from MongoDB at `http://localhost:9000/movies` while maintaining all specified access restrictions.
 
+    ### Movies API retrieving the movies
+    - **Database and Collection Naming**: After SSH-ing into the `movies-api` container, I discovered that it expects the MongoDB database name to be `tmdb_movies` with a collection name of `movie`. To ensure compatibility, I updated the MongoDB seeding configuration accordingly, so the API can query the database correctly. This change allows movies to display as expected in the browser at `http://localhost:9000/movies`
+
 
