@@ -37,4 +37,13 @@
     - `--drop`: This replaces the DB and creates a new one if it is already present.
     - `--file /movies_via_seeding.json --jsonArray`: Loads JSON array data from the shared file received from my PC to the database.
 
-    - **Solution for connection string error**: To address the `Could not connect to database using connectionString` error, switching to `ME_CONFIG_MONGODB_URL` fixed it. Recent versions of `mongo-express` require a full connection string (including username, password, and port) rather than just the server name. This solution was confirmed through [this helpful GitHub discussion](https://github.com/mongo-express/mongo-express-docker/issues/67).
+4. ## Step Four
+    ### Network Configuration (Isolation Adjustments)
+    - **Network Isolation**: After re-reading the assignment spec, I confirmed that the Movies API container **is allowed** to share a network with the MongoDB container. To achieve the necessary isolation while enabling this connection, I created a new network, `express-network-assign-one`, which only the `mongo-express` and `database` containers connect to. This setup ensures that:
+     - The Movies API can communicate with MongoDB by adding `api` to `web-app-db-network-assign-one`.
+     - The Express web app (Mongo Express) remains **inaccessible from both the Redis and Movies API containers**.
+     - The Redis container has no access to MongoDB, preserving required isolation.
+
+    This configuration allows the Movies API to retrieve data from MongoDB at `http://localhost:9000/movies` while maintaining all specified access restrictions.
+
+

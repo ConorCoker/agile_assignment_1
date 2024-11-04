@@ -1,6 +1,7 @@
 networks:
   web-app-db-network-assign-one:
   api-cache-network-assign-one:
+  express-network-assign-one:
  
 volumes:
   moviedata: # persist MongoDB data across container restarts
@@ -14,11 +15,12 @@ services:
       - '9000:9000'
     networks:
       - api-cache-network-assign-one # movies api is on two networks so it can talk to redis without exposing it
+      - web-app-db-network-assign-one
     depends_on:
       - database # db container must be created first as movies-api depends on it
       - caching
     environment:
-      - MONGODB_URI=mongodb://admin:secret@mongoDB:27017
+      - MONGODB_URI=mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@database:27017
       - ENABLE_WRITING_HANDLERS=false
       - RUST_BACKTRACE=full
       - REDIS_URI=redis://caching:6379
@@ -36,6 +38,7 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD}
     networks:
       - web-app-db-network-assign-one
+      - express-network-assign-one
     volumes: 
       - moviedata:/data/db 
   #CONTAINER 3
@@ -52,7 +55,7 @@ services:
       # ^^^ https://github.com/mongo-express/mongo-express-docker/issues/67
       # ^^^ fixes "Could not connect to database using connectionString" error
     networks:
-      - web-app-db-network-assign-one
+      - express-network-assign-one
     depends_on:
       - database
   #CONTAINER 4
@@ -64,7 +67,7 @@ services:
   # CONTAINER 5: MongoDB Seeding
   # This spins up a container with the sole purpose of sending the JSON movie data from the host PC to the db
   # container at mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@database:27017
-  mongo-seed:
+  fill-mongo:
     volumes:
       - ./seeding.json:/movies_via_seeding.json # data to be shared between the host and the container
     networks:
@@ -72,7 +75,7 @@ services:
     command:
     # https://www.mongodb.com/docs/database-tools/mongoimport/
     # https://stackoverflow.com/a/64372237
-      mongoimport --authenticationDatabase=admin --db moviesDB 
-      --collection titles --drop --file /movies_via_seeding.json --jsonArray 
+      mongoimport --authenticationDatabase=admin --db tmdb_movies
+      --collection movies --drop --file /movies_via_seeding.json --jsonArray 
       mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@database:27017
     image: mongo:8.0-rc
