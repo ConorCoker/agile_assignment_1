@@ -14,7 +14,6 @@ services:
       - '9000:9000'
     networks:
       - api-cache-network-assign-one # movies api is on two networks so it can talk to redis without exposing it
-      - web-app-db-network-assign-one 
     depends_on:
       - database # db container must be created first as movies-api depends on it
       - caching
@@ -29,7 +28,8 @@ services:
       # ^^^ https://www.dragonflydb.io/error-solutions/redis-connection-error-111
   #CONTAINER 2
   database:
-    container_name: mongoDB
+    container_name: mongo
+    # ^^^ https://github.com/mongo-express/mongo-express/issues/437
     image: mongo:8.0-rc
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USERNAME}
@@ -48,7 +48,9 @@ services:
     environment:
       - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGODB_USERNAME}
       - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGODB_PASSWORD}
-      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:secret@database:27017/
+      # ^^^ https://github.com/mongo-express/mongo-express-docker/issues/67
+      # ^^^ fixes "Could not connect to database using connectionString" error
     networks:
       - web-app-db-network-assign-one
     depends_on:
@@ -59,3 +61,18 @@ services:
     image: redis:alpine
     networks:
       - api-cache-network-assign-one # Only talk to movies api
+  # CONTAINER 5: MongoDB Seeding
+  # This spins up a container with the sole purpose of sending the JSON movie data from the host PC to the db
+  # container at mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@database:27017
+  mongo-seed:
+    volumes:
+      - ./seeding.json:/movies_via_seeding.json # data to be shared between the host and the container
+    networks:
+      - web-app-db-network-assign-one
+    command:
+    # https://www.mongodb.com/docs/database-tools/mongoimport/
+    # https://stackoverflow.com/a/64372237
+      mongoimport --authenticationDatabase=admin --db moviesDB 
+      --collection titles --drop --file /movies_via_seeding.json --jsonArray 
+      mongodb://${MONGODB_USERNAME}:${MONGODB_PASSWORD}@database:27017
+    image: mongo:8.0-rc
