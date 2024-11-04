@@ -58,6 +58,8 @@ services:
       - express-network-assign-one
     depends_on:
       - database
+    profiles:
+      - developer
   #CONTAINER 4
   caching:
     container_name: redis
